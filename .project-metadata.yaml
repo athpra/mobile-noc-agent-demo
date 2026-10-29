@@ -15,8 +15,8 @@ date: "2026-10-29"
 environment_variables:
   CAII_BASE_URL:
     default: ""
-    description: "Base URL of the Cloudera AI Inference Service OpenAI-compatible endpoint for the deployed LLM, e.g. https://<domain>/namespaces/serving-default/endpoints/<endpoint>/v1. The model must support tool calling."
-    required: true
+    description: "Base URL of the Cloudera AI Inference Service OpenAI-compatible endpoint for the deployed LLM, e.g. https://<domain>/namespaces/serving-default/endpoints/<endpoint>/v1. The model must support tool calling. Needed for the agent to run; the app shows a setup message until it is set."
+    required: false
   CAII_MODEL_NAME:
     default: "nvidia/nemotron-3-super-120b-a12b"
     description: "Model name as registered on the Cloudera AI Inference Service endpoint. The endpoint must have tool calling enabled; run scripts/check_endpoint.py to confirm. 8B models often lose track of a multi-step investigation."
