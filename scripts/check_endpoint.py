@@ -14,7 +14,11 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+try:
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+except NameError:  # CML runs task scripts in a kernel, where __file__ is undefined; cwd is the project root
+    PROJECT_ROOT = Path.cwd()
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from langchain_core.tools import tool  # noqa: E402
 
@@ -56,4 +60,7 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    # Raise only on failure: in a CML kernel even SystemExit(0) is reported as an exception.
+    status = main()
+    if status:
+        raise SystemExit(status)
