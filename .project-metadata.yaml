@@ -1,0 +1,62 @@
+name: Mobile NOC Agent Demo
+description: >
+  A LangGraph agent that investigates a 5G radio network problem the way a NOC
+  engineer would. It reads alarms, KPIs, cell configuration and topology from a
+  synthetic OSS, runs its own analysis code in a sandbox, and proposes a
+  configuration fix that a person must approve before it is applied. The
+  staged fault is a PCI confusion after a small cell is commissioned. The LLM
+  is served by Cloudera AI Inference Service, and everything runs from a
+  single CML Application.
+author: Cloudera AI Demo
+specification_version: 1.0
+prototype_version: 1.0
+date: "2026-10-29"
+
+environment_variables:
+  CAII_BASE_URL:
+    default: ""
+    description: "Base URL of the Cloudera AI Inference Service OpenAI-compatible endpoint for the deployed LLM, e.g. https://<domain>/namespaces/serving-default/endpoints/<endpoint>/v1. The model must support tool calling."
+    required: true
+  CAII_MODEL_NAME:
+    default: "meta/llama-3.1-70b-instruct"
+    description: "Model name as registered on the Cloudera AI Inference Service endpoint. Use a model with reliable tool calling; 8B models often lose track of a multi-step investigation."
+    required: true
+  CAII_API_KEY:
+    default: ""
+    description: "Optional. Leave blank to use the workload token CML mounts at /tmp/jwt."
+    required: false
+  SANDBOX_PROVIDER:
+    default: "auto"
+    description: "Where the agent's analysis code runs: 'auto' (E2B when E2B_API_KEY is set, otherwise local), 'e2b', or 'local'. 'local' is a subprocess with time and memory limits, not a security boundary."
+    required: false
+  E2B_API_KEY:
+    default: ""
+    description: "Optional. E2B API key for an isolated microVM sandbox. Needs outbound internet from the workspace. Only synthetic data is sent."
+    required: false
+  LLM_TEMPERATURE:
+    default: "0.1"
+    description: "Sampling temperature. Keep low so the demo takes a similar path every run."
+    required: false
+
+tasks:
+  - type: run_session
+    name: Install dependencies
+    script: scripts/install_dependencies.py
+    kernel: python3
+    cpu: 1
+    memory: 2
+
+  - type: run_session
+    name: Check synthetic network and sandbox
+    script: scripts/check_scenario.py
+    kernel: python3
+    cpu: 1
+    memory: 2
+
+  - type: start_application
+    name: Mobile NOC Agent
+    subdomain: mobile-noc-agent
+    script: launch_app.py
+    kernel: python3
+    cpu: 2
+    memory: 4

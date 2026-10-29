@@ -1,0 +1,56 @@
+# Cloudera Blueprint catalog metadata
+# Populate fields used by the master blueprint website and internal catalog.
+# NOTE: catalog_classification, tags and public_github_link are a first pass --
+# confirm before publishing.
+
+# --- Identity ---
+name: "Mobile NOC Agent Demo"
+slug: "mobile-noc-agent-demo"
+description: "LangGraph agent that diagnoses a staged 5G RAN fault (PCI confusion) in a synthetic network: it gathers FM/PM/CM evidence through trusted tools, analyses it in a code sandbox, and applies a configuration fix only after a person approves the diff -- using an LLM on Cloudera AI Inference Service."
+reprise_link: ""                             # TODO: no Reprise demo recorded yet
+
+# --- Classification (website filters) ---
+catalog_classification:
+  - Launchable (AMP)                         # Options: Enterprise Blueprint | Research | Launchable (AMP) | Developer Example
+launchable: true                             # true | false
+lifecycle_status: Active                     # e.g., Active | Deprecated
+
+# --- Industry & alignment ---
+industry: Telecom                            # e.g., General | Telecom | Financial Services | Healthcare & Life Sciences | Retail | Media | Physical AI & Robotics
+industry_alignment: "Vertical"               # Horizontal | Vertical
+target_vertical: "Mobile network operations (NOC)"
+
+# --- Tags (website search & browse) ---
+tags:
+  - agentic-ai
+  - network-automation
+  - 5g
+  - ran
+  - noc
+  - langgraph
+  - human-in-the-loop
+  - code-sandbox
+  - telecom
+
+# --- Relationships ---
+product_mapping:                             # Cloudera products used
+  - Cloudera AI Inference Service
+  - Cloudera AI Workbench
+# model_dependencies:                          # Models, embeddings, or external AI services, if any. Comment out if none.
+#   - meta/llama-3.1-70b-instruct              # CAII_MODEL_NAME default; any model with reliable tool calling works
+
+# --- Provenance ---
+publisher: cloudera                          # cloudera | partner-name
+source: Internal                             # Internal | Partner | NVIDIA Adaptation | Customer
+
+# --- Repository & assets ---
+public_github_link: ""                       # TODO: e.g. https://github.com/athpra/mobile-noc-agent-demo once pushed
+#private_github_link: ""                      # If applicable, original repo during development
+
+# --- Ownership ---
+maintainer_name: "Athul Prasad"
+
+# --- Dates ---
+date_created: "2026-10-29"
+date_updated: "2026-10-29"
+published_date: ""                           # Set once this blueprint is actually published to the catalog

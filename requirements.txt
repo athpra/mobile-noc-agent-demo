@@ -1,0 +1,11 @@
+streamlit>=1.50,<2
+pandas>=2.0,<3
+python-dotenv>=1.0,<2
+
+langgraph>=0.4,<1.0
+langchain-core>=0.3,<1.0
+langchain-openai>=0.3,<1.0
+
+# Optional isolated sandbox. Used when E2B_API_KEY is set (SANDBOX_PROVIDER=auto
+# or e2b). Without it the demo falls back to the local subprocess runner.
+e2b-code-interpreter>=1.0,<3
