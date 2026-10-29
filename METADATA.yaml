@@ -1,6 +1,6 @@
 # Cloudera Blueprint catalog metadata
 # Populate fields used by the master blueprint website and internal catalog.
-# NOTE: catalog_classification, tags and public_github_link are a first pass --
+# NOTE: catalog_classification and tags are a first pass --
 # confirm before publishing.
 
 # --- Identity ---
@@ -44,7 +44,7 @@ publisher: cloudera                          # cloudera | partner-name
 source: Internal                             # Internal | Partner | NVIDIA Adaptation | Customer
 
 # --- Repository & assets ---
-public_github_link: ""                       # TODO: e.g. https://github.com/athpra/mobile-noc-agent-demo once pushed
+public_github_link: "https://github.com/athpra/mobile-noc-agent-demo"
 #private_github_link: ""                      # If applicable, original repo during development
 
 # --- Ownership ---
