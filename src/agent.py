@@ -52,8 +52,13 @@ _THINK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 
 
 def strip_reasoning(text: str) -> str:
-    """Remove inline <think> blocks that some reasoning models emit."""
-    return _THINK_RE.sub("", text or "").strip()
+    """Remove inline reasoning that some models (e.g. Nemotron) put in the
+    answer: whole <think> blocks, or everything before a lone </think> when
+    the server dropped the opening tag."""
+    text = _THINK_RE.sub("", text or "")
+    if "</think>" in text:
+        text = text.rsplit("</think>", 1)[1]
+    return text.strip()
 
 
 def build_agent(ctx: DemoContext, model: BaseChatModel, checkpointer: BaseCheckpointSaver):

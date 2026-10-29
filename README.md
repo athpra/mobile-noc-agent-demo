@@ -136,7 +136,7 @@ cdsw-build.sh            Dependency install for CML
 launch_app.py            CML Application entrypoint
 app.py                   Streamlit UI
 src/                     Agent, tools, sandbox, synthetic network
-scripts/                 install_dependencies.py, check_scenario.py
+scripts/                 install_dependencies.py, check_scenario.py, check_endpoint.py
 tests/                   Network, guardrail and full-graph tests
 deploy/                  CML deployment guide
 output/                  Audit log (git-ignored)
@@ -146,8 +146,10 @@ output/                  Audit log (git-ignored)
 
 - A Cloudera AI Workbench project with Python 3.10 or later.
 - A model on Cloudera AI Inference Service with **tool calling** enabled.
-  Use a 70B-class model or a strong reasoning model; 8B models often lose
-  track of a multi-step investigation.
+  The default is `nvidia/nemotron-3-super-120b-a12b`; any strong model with
+  tool calling works, while 8B models often lose track of a multi-step
+  investigation. `python scripts/check_endpoint.py` confirms the endpoint
+  returns tool calls.
 - Optional: an E2B API key and outbound internet for the isolated sandbox.
 
 ## Hardware Requirements

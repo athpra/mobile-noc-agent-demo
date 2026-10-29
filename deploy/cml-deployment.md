@@ -6,9 +6,9 @@ as a CML project in one step. That file (and [`launch_app.py`](../launch_app.py)
 its Application entrypoint) stays at the repository root because CML reads
 both from there directly. This page documents the deployment flow they drive.
 
-1. Deploy a model with reliable tool calling on Cloudera AI Inference
-   Service (for example Llama 3.1 70B Instruct) and copy its OpenAI-compatible
-   base URL, ending in `/v1`.
+1. Deploy a model with tool calling enabled on Cloudera AI Inference Service
+   (the default is `nvidia/nemotron-3-super-120b-a12b`) and copy its
+   OpenAI-compatible base URL, ending in `/v1`.
 2. In your CML workspace, create a new project from this Git repo (push this
    directory to a repo CML can reach first).
 3. CML prompts for the environment variables declared in
@@ -19,8 +19,18 @@ both from there directly. This page documents the deployment flow they drive.
    and sandbox` tasks, then starts the `Mobile NOC Agent` Application. The
    check task prints the before/after handover success rate and fails loudly
    if the scenario or sandbox is broken.
-5. Open the Application and click **Handover success on GNB1042-C1 dropped
+5. Optional but recommended the first time: open a Session and run
+   `python scripts/check_endpoint.py`. It confirms the endpoint returns
+   structured tool calls, which the agent depends on.
+6. Open the Application and click **Handover success on GNB1042-C1 dropped
    this morning. Why?**
+
+## Private repository
+
+The project can come from a private GitHub repo. In CML, copy your SSH
+public key from **User Settings > Outbound SSH**, add it
+to the repo as a read-only **Deploy key** on GitHub, and create the project
+with the repo's SSH URL (`git@github.com:athpra/mobile-noc-agent-demo.git`).
 
 ## Without the AMP flow
 

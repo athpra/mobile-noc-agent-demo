@@ -37,7 +37,7 @@ product_mapping:                             # Cloudera products used
   - Cloudera AI Inference Service
   - Cloudera AI Workbench
 # model_dependencies:                          # Models, embeddings, or external AI services, if any. Comment out if none.
-#   - meta/llama-3.1-70b-instruct              # CAII_MODEL_NAME default; any model with reliable tool calling works
+#   - nvidia/nemotron-3-super-120b-a12b        # CAII_MODEL_NAME default; any model with reliable tool calling works
 
 # --- Provenance ---
 publisher: cloudera                          # cloudera | partner-name

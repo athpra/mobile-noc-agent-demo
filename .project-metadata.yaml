@@ -18,8 +18,8 @@ environment_variables:
     description: "Base URL of the Cloudera AI Inference Service OpenAI-compatible endpoint for the deployed LLM, e.g. https://<domain>/namespaces/serving-default/endpoints/<endpoint>/v1. The model must support tool calling."
     required: true
   CAII_MODEL_NAME:
-    default: "meta/llama-3.1-70b-instruct"
-    description: "Model name as registered on the Cloudera AI Inference Service endpoint. Use a model with reliable tool calling; 8B models often lose track of a multi-step investigation."
+    default: "nvidia/nemotron-3-super-120b-a12b"
+    description: "Model name as registered on the Cloudera AI Inference Service endpoint. The endpoint must have tool calling enabled; run scripts/check_endpoint.py to confirm. 8B models often lose track of a multi-step investigation."
     required: true
   CAII_API_KEY:
     default: ""
@@ -32,6 +32,10 @@ environment_variables:
   E2B_API_KEY:
     default: ""
     description: "Optional. E2B API key for an isolated microVM sandbox. Needs outbound internet from the workspace. Only synthetic data is sent."
+    required: false
+  LLM_MAX_TOKENS:
+    default: "4096"
+    description: "Max tokens per model reply. Reasoning models need room to think before the answer or tool call."
     required: false
   LLM_TEMPERATURE:
     default: "0.1"

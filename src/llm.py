@@ -15,6 +15,7 @@ def build_chat_model(settings: Settings) -> ChatOpenAI:
         model=settings.caii_model_name,
         api_key=get_api_key(),
         temperature=settings.llm_temperature,
+        max_tokens=settings.llm_max_tokens,
         timeout=120,
         max_retries=2,
     )

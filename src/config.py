@@ -41,6 +41,9 @@ class Settings:
     sandbox_provider: str          # "auto" | "e2b" | "local"
     sim_seed: int
     audit_log_path: Path
+    # Reasoning models (e.g. Nemotron) spend tokens thinking before the
+    # answer or tool call, so leave generous room.
+    llm_max_tokens: int = 4096
 
     @property
     def llm_configured(self) -> bool:
@@ -55,6 +58,7 @@ def load_settings() -> Settings:
         sandbox_provider=os.environ.get("SANDBOX_PROVIDER", "auto").strip().lower(),
         sim_seed=int(os.environ.get("SIM_SEED", "7")),
         audit_log_path=Path(os.environ.get("AUDIT_LOG_PATH", OUTPUT_DIR / "audit.jsonl")),
+        llm_max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "4096")),
     )
 
 
