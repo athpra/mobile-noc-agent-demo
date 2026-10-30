@@ -43,3 +43,11 @@ def test_model_turns_text_into_tool_calls():
         message=AIMessage(content="<tool_call><function=get_alarms></function></tool_call>"))])
     msg = model._recover(result).generations[0].message
     assert msg.tool_calls[0]["name"] == "get_alarms" and msg.content == ""
+
+
+def test_strip_reasoning_handles_unclosed_think():
+    from src.agent import strip_reasoning
+
+    assert strip_reasoning("<think>a</think>\nAnswer") == "Answer"
+    assert strip_reasoning("a</think>Answer") == "Answer"
+    assert strip_reasoning("<think>ran out of tokens while reaso") == ""

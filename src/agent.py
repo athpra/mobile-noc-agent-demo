@@ -53,11 +53,14 @@ _THINK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 
 def strip_reasoning(text: str) -> str:
     """Remove inline reasoning that some models (e.g. Nemotron) put in the
-    answer: whole <think> blocks, or everything before a lone </think> when
-    the server dropped the opening tag."""
+    answer: whole <think> blocks, everything before a lone </think> when the
+    server dropped the opening tag, and an unclosed <think> (the model ran out
+    of tokens while still reasoning)."""
     text = _THINK_RE.sub("", text or "")
     if "</think>" in text:
         text = text.rsplit("</think>", 1)[1]
+    if "<think>" in text:
+        text = text.split("<think>", 1)[0]
     return text.strip()
 
 

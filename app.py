@@ -37,6 +37,13 @@ SAMPLE_QUESTIONS = [
     "Is any active alarm affecting customers right now?",
 ]
 
+# Shown instead of SAMPLE_QUESTIONS once the incident is resolved.
+FOLLOW_UP_QUESTIONS = [
+    "Write the ticket note for this incident.",
+    "Are any cells below target right now?",
+    "Check the PCIs within two hops of SC1188-C1 for any remaining conflicts.",
+]
+
 TOOL_ICONS = {
     "get_network_summary": ":material/lan:",
     "get_alarms": ":material/notifications_active:",
@@ -197,6 +204,22 @@ def render_tool_call(tc: dict, result: ToolMessage | None) -> None:
             st.markdown(out)
 
 
+def render_empty_answer(m: AIMessage, raw: str) -> None:
+    """A reply with no visible answer: say why instead of showing nothing."""
+    if (m.response_metadata or {}).get("finish_reason") == "length":
+        why = (f"The model ran out of tokens (LLM_MAX_TOKENS={settings.llm_max_tokens}) before it answered. "
+               "Raise LLM_MAX_TOKENS or ask a narrower question.")
+    elif raw.strip():
+        why = "The model only reasoned and gave no answer. Ask again or rephrase the question."
+    else:
+        why = "The model returned an empty reply. Ask again or rephrase the question."
+    with st.chat_message("assistant", avatar=":material/support_agent:"):
+        st.warning(why, icon=":material/report:")
+        if raw.strip():
+            with st.expander("Model reasoning", icon=":material/psychology:"):
+                st.text(raw[-6000:])
+
+
 def render_transcript(messages: list) -> None:
     results = {m.tool_call_id: m for m in messages if isinstance(m, ToolMessage)}
     for m in messages:
@@ -204,8 +227,10 @@ def render_transcript(messages: list) -> None:
             with st.chat_message("user", avatar=":material/person:"):
                 st.markdown(text_of(m.content))
         elif isinstance(m, AIMessage):
-            text = strip_reasoning(text_of(m.content))
+            raw = text_of(m.content)
+            text = strip_reasoning(raw)
             if not text and not m.tool_calls:
+                render_empty_answer(m, raw)
                 continue
             with st.chat_message("assistant", avatar=":material/support_agent:"):
                 if text:
@@ -214,7 +239,8 @@ def render_transcript(messages: list) -> None:
                     render_tool_call(tc, results.get(tc["id"]))
 
 
-def render_approval(agent, intr, history: list, progress_slot) -> None:
+def render_approval(intr) -> dict | None:
+    """Approval card. Returns the engineer's decision once they click."""
     p = intr.value
     key = f"{p['cell_id']}-{p['attribute']}-{p['proposed_value']}-{p['network_time']}"
     style.approval_summary(p)
@@ -224,11 +250,27 @@ def render_approval(agent, intr, history: list, progress_slot) -> None:
     approve, reject = st.columns(2)
     if approve.button("Approve and apply", type="primary", key=f"approve-{key}", width="stretch",
                       icon=":material/check_circle:"):
-        decision = {"approved": True, "comment": comment, "approver": approver_name()}
-        run(agent, Command(resume=decision), history, progress_slot)
+        return {"approved": True, "comment": comment, "approver": approver_name()}
     if reject.button("Reject", key=f"reject-{key}", width="stretch", icon=":material/cancel:"):
-        decision = {"approved": False, "comment": comment, "approver": approver_name()}
-        run(agent, Command(resume=decision), history, progress_slot)
+        return {"approved": False, "comment": comment, "approver": approver_name()}
+    return None
+
+
+def render_resolution() -> None:
+    """Closing card once the fix is verified: what changed, who approved it, the effect."""
+    approved = [e for e in ctx.audit.entries if e.get("kind") == "cm_change" and e.get("decision") == "approved"]
+    if not approved:
+        return
+    last = approved[-1]
+    kpis = ctx.oss.get_kpis(SERVING_CELL)
+    before = [r for r in kpis if r["rop_start"] < last["network_time"]]
+    effect = (f"HO success on {SERVING_CELL}: {before[-1]['ho_sr_pct']:.1f}% → {kpis[-1]['ho_sr_pct']:.1f}%"
+              if before else "")
+    style.resolution(
+        f"{last['cell_id']} {last['attribute']} {last['old']} → {last['new']}",
+        f"approved by {last.get('approver', 'operator')} at {last['network_time']}",
+        effect,
+    )
 
 
 def change_events(cell: str, presenter: bool) -> list[dict]:
@@ -271,9 +313,26 @@ def picked_on_map() -> str | None:
     return rows[0].get("cell_id") if rows else None
 
 
-# --- sidebar -------------------------------------------------------------
+# --- state ------------------------------------------------------------------
 
 agent, setup_error = get_agent()
+messages, interrupts = [], []
+if agent is not None:
+    snap = agent.get_state(cfg)
+    messages = snap.values.get("messages", []) if snap.values else []
+    interrupts = pending_interrupts(agent, cfg)
+
+health = charts.cell_health(ctx.oss)
+unhealthy = health[health["status"].isin(["Degraded", "Critical"])]
+steps = investigation_steps(messages, bool(interrupts))
+# Resolved: a change was approved, the agent re-checked the KPIs, and every cell is back on target.
+resolved = ctx.changes_applied > 0 and steps[-1][1] == "done" and unhealthy.empty
+
+# A run starts at the end of the script, after the network panels are drawn,
+# so the map and KPIs stay on screen while the agent works.
+pending_run = None
+
+# --- sidebar -------------------------------------------------------------
 
 with st.sidebar:
     st.markdown("#### :material/science: Scenario")
@@ -285,9 +344,9 @@ with st.sidebar:
         new_session()
         st.rerun()
 
-    st.markdown("#### :material/chat: Try asking")
-    for q in SAMPLE_QUESTIONS:
-        if st.button(q, width="stretch", disabled=agent is None):
+    st.markdown("#### :material/chat: " + ("Follow up" if resolved else "Try asking"))
+    for q in FOLLOW_UP_QUESTIONS if resolved else SAMPLE_QUESTIONS:
+        if st.button(q, width="stretch", disabled=agent is None or bool(interrupts)):
             st.session_state.queued_question = q
             st.rerun()
 
@@ -300,18 +359,10 @@ with st.sidebar:
 
 # --- header and network health ---------------------------------------------
 
-messages, interrupts = [], []
-if agent is not None:
-    snap = agent.get_state(cfg)
-    messages = snap.values.get("messages", []) if snap.values else []
-    interrupts = pending_interrupts(agent, cfg)
-
 style.header(ctx.network_time, f"{ctx.oss.day_start:%d %b %Y}", settings.caii_model_name,
              ctx.sandbox.name, live=agent is not None)
 
-health = charts.cell_health(ctx.oss)
 active_alarms = ctx.oss.get_alarms(active_only=True)
-unhealthy = health[health["status"].isin(["Degraded", "Critical"])]
 m1, m2, m3, m4, m5 = st.columns(5)
 m1.metric("Cells in service", len(health), border=True)
 m2.metric("Network HO success", f"{health['ho_sr_pct'].mean():.1f}%", border=True,
@@ -330,7 +381,7 @@ chat_col, side_col = st.columns([11, 9], gap="large")
 with chat_col:
     style.section("Investigation", f"thread {st.session_state.thread_id}")
     progress_slot = st.empty()
-    style.progress(investigation_steps(messages, bool(interrupts)), progress_slot)
+    style.progress(steps, progress_slot)
     if setup_error:
         st.warning(f"Model endpoint not ready. {setup_error}", icon=":material/link_off:")
 
@@ -346,18 +397,23 @@ with chat_col:
         st.error(st.session_state.last_error, icon=":material/error:")
 
     for intr in interrupts[:1]:
-        render_approval(agent, intr, messages, progress_slot)
+        decision = render_approval(intr)
+        if decision is not None:
+            pending_run = (Command(resume=decision), None)
 
+    if resolved:
+        render_resolution()
+
+    run_area = st.container()
     queued = st.session_state.pop("queued_question", None)
     typed = st.chat_input(
-        "Approve or reject the change first" if interrupts else "Ask the NOC agent",
+        "Approve or reject the change first" if interrupts
+        else "Ask a follow-up question" if resolved else "Ask the NOC agent",
         disabled=agent is None or bool(interrupts),
     )
     question = typed or queued
     if question and agent is not None and not interrupts:
-        with st.chat_message("user", avatar=":material/person:"):
-            st.markdown(question)
-        run(agent, {"messages": [{"role": "user", "content": question}]}, messages, progress_slot, intro_slot)
+        pending_run = ({"messages": [{"role": "user", "content": question}]}, question)
 
 # --- network panels --------------------------------------------------------
 
@@ -436,3 +492,13 @@ with side_col:
             style.section("Configuration changes today")
             changes = pd.DataFrame(ctx.oss.get_cm_changes()).astype(str)  # values mix ints and text
             st.dataframe(changes, hide_index=True, width="stretch")
+
+# --- agent run ---------------------------------------------------------------
+
+if pending_run is not None:
+    payload, question = pending_run
+    with run_area:
+        if question:
+            with st.chat_message("user", avatar=":material/person:"):
+                st.markdown(question)
+        run(agent, payload, messages, progress_slot, intro_slot)

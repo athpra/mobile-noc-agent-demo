@@ -83,7 +83,7 @@ section[data-testid="stSidebar"] .stButton button { text-align: left; justify-co
 .noc-steps { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 0 0 14px; }
 .noc-step { border: 1px solid var(--noc-line); border-radius: 10px; padding: 8px 9px 7px; background: rgba(21, 33, 42, 0.55); min-width: 0; }
 .noc-step .n { font-size: 0.68rem; color: var(--noc-muted); letter-spacing: 0.06em; text-transform: uppercase; }
-.noc-step .l { font-size: 0.8rem; color: var(--noc-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.noc-step .l { font-size: 0.78rem; color: var(--noc-ink); line-height: 1.25; overflow-wrap: anywhere; }
 .noc-step .bar { height: 3px; border-radius: 2px; margin-top: 6px; background: var(--noc-line); }
 .noc-step.done { border-color: rgba(66, 199, 166, 0.45); }
 .noc-step.done .bar { background: var(--noc-accent); }
@@ -116,6 +116,15 @@ section[data-testid="stSidebar"] .stButton button { text-align: left; justify-co
 .noc-badge.fail { color: #f19a9a; border-color: rgba(208, 59, 59, 0.7); background: rgba(208, 59, 59, 0.12); }
 .noc-check b { color: var(--noc-ink); font-weight: 600; }
 .noc-check span.d { color: var(--noc-muted); }
+
+/* resolved card */
+.noc-resolved { border: 1px solid rgba(12, 163, 12, 0.55); border-radius: 14px; padding: 14px 18px; margin: 6px 0 12px;
+  background: linear-gradient(180deg, rgba(12, 163, 12, 0.10), rgba(21, 33, 42, 0.9) 70%); }
+.noc-resolved .tag { display: inline-block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;
+  color: #06210a; background: #3fbf3f; border-radius: 6px; padding: 2px 8px; }
+.noc-resolved .what { font-family: ui-monospace, Menlo, monospace; font-size: 0.95rem; margin-top: 8px; color: var(--noc-ink); }
+.noc-resolved .who, .noc-resolved .next { color: var(--noc-muted); font-size: 0.84rem; }
+.noc-resolved .effect { color: #9be39b; font-size: 0.92rem; font-weight: 600; margin: 4px 0; }
 
 /* alarms */
 .noc-alarms { display: flex; flex-direction: column; gap: 6px; }
@@ -207,6 +216,16 @@ def approval_summary(p: dict) -> None:
         f'<span class="v new">{escape(str(p["proposed_value"]))}</span></div>'
         f'<div class="noc-reason"><b>Agent\'s reason.</b> {escape(p["reason"])}</div>'
         f'<div class="noc-checks">{checks}</div></div>'
+    )
+
+
+def resolution(change: str, approval: str, effect: str) -> None:
+    html(
+        '<div class="noc-resolved"><span class="tag">✓ Incident resolved</span>'
+        f'<div class="what">{escape(change)}</div><div class="who">{escape(approval)}</div>'
+        + (f'<div class="effect">{escape(effect)}</div>' if effect else "")
+        + '<div class="next">Ask a follow-up (suggestions in the sidebar), or reset the scenario to run the demo again.</div>'
+        '</div>'
     )
 
 
