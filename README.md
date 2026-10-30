@@ -116,8 +116,7 @@ go-live.
 > radio side**: 12 gNBs, 36 NR cells and one small cell, with their CM
 > attributes, neighbour relations, per-ROP PM counters and FM alarms. No
 > transport (backhaul) or core (AMF, SMF, UPF) elements, alarms or counters
-> are generated yet. The diagram also shows four of the seven read tools; the
-> table below lists all of them. The sandbox and guardrail boxes show options
+> are generated yet. The sandbox and guardrail boxes show options
 > as well as what is built; see
 > [Sandbox Options](#sandbox-options-e2b-and-pyodide) and
 > [Access Control](#access-control-rbac) for what is in the code today.
