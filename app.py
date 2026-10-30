@@ -126,8 +126,12 @@ def step_label(msg) -> str | None:
     return None
 
 
-def run(agent, payload) -> None:
+def run(agent, payload, history: list, progress_slot, hide_while_running=None) -> None:
+    """Streams one agent run, redrawing the progress strip as each message arrives."""
     st.session_state.last_error = None
+    if hide_while_running is not None:
+        hide_while_running.empty()
+    live = list(history)
     with st.status("Agent working", expanded=True) as status:
         try:
             for update in agent.stream(payload, cfg, stream_mode="updates"):
@@ -135,9 +139,11 @@ def run(agent, payload) -> None:
                     if node == "__interrupt__" or not isinstance(data, dict):
                         continue
                     for msg in data.get("messages", []):
+                        live.append(msg)
                         label = step_label(msg)
                         if label:
                             status.write(label)
+                    style.progress(investigation_steps(live, False), progress_slot)
             status.update(label="Done", state="complete", expanded=False)
         except GraphRecursionError:
             st.session_state.last_error = "The agent used too many steps without finishing. Ask a narrower question."
@@ -208,7 +214,7 @@ def render_transcript(messages: list) -> None:
                     render_tool_call(tc, results.get(tc["id"]))
 
 
-def render_approval(agent, intr) -> None:
+def render_approval(agent, intr, history: list, progress_slot) -> None:
     p = intr.value
     key = f"{p['cell_id']}-{p['attribute']}-{p['proposed_value']}-{p['network_time']}"
     style.approval_summary(p)
@@ -218,9 +224,11 @@ def render_approval(agent, intr) -> None:
     approve, reject = st.columns(2)
     if approve.button("Approve and apply", type="primary", key=f"approve-{key}", width="stretch",
                       icon=":material/check_circle:"):
-        run(agent, Command(resume={"approved": True, "comment": comment, "approver": approver_name()}))
+        decision = {"approved": True, "comment": comment, "approver": approver_name()}
+        run(agent, Command(resume=decision), history, progress_slot)
     if reject.button("Reject", key=f"reject-{key}", width="stretch", icon=":material/cancel:"):
-        run(agent, Command(resume={"approved": False, "comment": comment, "approver": approver_name()}))
+        decision = {"approved": False, "comment": comment, "approver": approver_name()}
+        run(agent, Command(resume=decision), history, progress_slot)
 
 
 def change_events(cell: str, presenter: bool) -> list[dict]:
@@ -304,21 +312,24 @@ chat_col, side_col = st.columns([11, 9], gap="large")
 
 with chat_col:
     style.section("Investigation", f"thread {st.session_state.thread_id}")
-    style.progress(investigation_steps(messages, bool(interrupts)))
+    progress_slot = st.empty()
+    style.progress(investigation_steps(messages, bool(interrupts)), progress_slot)
     if setup_error:
         st.warning(f"Model endpoint not ready. {setup_error}", icon=":material/link_off:")
 
+    intro_slot = st.empty()
     if not messages:
-        style.empty_state("Ask the agent about the network",
-                          "Pick a question on the left or type one below. The agent gathers evidence, "
-                          "analyses it in a sandbox and proposes a fix for you to approve.")
+        with intro_slot:
+            style.empty_state("Ask the agent about the network",
+                              "Pick a question on the left or type one below. The agent gathers evidence, "
+                              "analyses it in a sandbox and proposes a fix for you to approve.")
     render_transcript(messages)
 
     if st.session_state.last_error:
         st.error(st.session_state.last_error, icon=":material/error:")
 
     for intr in interrupts[:1]:
-        render_approval(agent, intr)
+        render_approval(agent, intr, messages, progress_slot)
 
     queued = st.session_state.pop("queued_question", None)
     typed = st.chat_input(
@@ -329,7 +340,7 @@ with chat_col:
     if question and agent is not None and not interrupts:
         with st.chat_message("user", avatar=":material/person:"):
             st.markdown(question)
-        run(agent, {"messages": [{"role": "user", "content": question}]})
+        run(agent, {"messages": [{"role": "user", "content": question}]}, messages, progress_slot, intro_slot)
 
 # --- network panels --------------------------------------------------------
 

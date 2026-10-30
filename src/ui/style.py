@@ -175,14 +175,16 @@ def header(network_time: str, date_label: str, model: str | None, sandbox: str, 
     )
 
 
-def progress(steps: list[tuple[str, str]]) -> None:
-    """steps: (label, state) with state in todo | done | active | stopped."""
+def progress(steps: list[tuple[str, str]], target=None) -> None:
+    """steps: (label, state) with state in todo | done | active | stopped.
+    `target` is a placeholder (st.empty()) to redraw in place while the agent runs."""
     cells = "".join(
         f'<div class="noc-step {state}"><div class="n">Step {i}</div>'
         f'<div class="l" title="{escape(label)}">{escape(label)}</div><div class="bar"></div></div>'
         for i, (label, state) in enumerate(steps, start=1)
     )
-    html(f'<div class="noc-steps" role="list" aria-label="Investigation progress">{cells}</div>')
+    (target or st).markdown(f'<div class="noc-steps" role="list" aria-label="Investigation progress">{cells}</div>',
+                            unsafe_allow_html=True)
 
 
 def approval_summary(p: dict) -> None:
