@@ -204,6 +204,8 @@ def kpi_trend(kpis: pd.DataFrame, day_start: datetime, events: list[dict]) -> al
         for subset, align, dx in ((edf[~late], "left", 4), (edf[late], "right", -4)):
             if not subset.empty:
                 layers.append(alt.Chart(subset).mark_text(
-                    align=align, baseline="top", dx=dx, fontSize=10, color=INK, y=4).encode(x="t:T", text="label:N"))
+                    align=align, baseline="top", dx=dx, fontSize=10, color=INK, y=4).encode(
+                    x="t:T", text="short:N", tooltip=[alt.Tooltip("time:N", title="Time"),
+                                                      alt.Tooltip("label:N", title="Change")]))
 
     return _base(alt.layer(*layers).properties(height=240))

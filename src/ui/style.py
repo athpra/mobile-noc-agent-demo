@@ -39,10 +39,12 @@ section[data-testid="stSidebar"] { background: #0b1218; border-right: 1px solid 
 div[data-testid="stMetric"] {
   background: linear-gradient(180deg, var(--noc-panel-2), var(--noc-panel));
   border: 1px solid var(--noc-line) !important;
-  border-radius: 12px; padding: 12px 14px 8px;
+  border-radius: 12px; padding: 12px 12px 8px !important;
 }
-div[data-testid="stMetricLabel"] p { color: var(--noc-muted); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
-div[data-testid="stMetricValue"] { font-size: 1.65rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+div[data-testid="stMetricLabel"] p { color: var(--noc-muted); font-size: 0.78rem; letter-spacing: 0.04em; white-space: normal; }
+div[data-testid="stMetricValue"] { font-size: clamp(1.15rem, 1.7vw, 1.65rem); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* narrow tiles: let values and deltas show in full instead of "10..." */
+div[data-testid="stMetricValue"] > div, div[data-testid="stMetricDelta"] > div { overflow: visible; text-overflow: clip; }
 
 /* bordered containers, expanders, tabs */
 div[data-testid="stVerticalBlockBorderWrapper"] { border-radius: 14px; }

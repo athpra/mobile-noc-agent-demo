@@ -240,9 +240,26 @@ def change_events(cell: str, presenter: bool) -> list[dict]:
     for c in ctx.oss.get_cm_changes():
         if c["cell_id"] not in nearby or not (presenter or str(c["source"]).startswith("noc-agent")):
             continue
-        what = "created" if c["change"] == "cell created" else f"{c['change']} {c['old_value']}→{c['new_value']}"
-        events.append({"time": c["time"], "label": f"{c['cell_id']} {what}"})
+        if c["change"] == "cell created":
+            short = full = f"{c['cell_id']} created"
+        else:
+            short = f"{c['change']} {c['old_value']}→{c['new_value']}"
+            full = f"{c['cell_id']} {short}"
+        events.append({"time": c["time"], "short": short, "label": full})
     return events
+
+
+# Changes smaller than this (percentage points) are ROP-to-ROP noise, so the
+# metric tiles show them in grey instead of red or green.
+NOISE_PTS = {"ho_sr_pct": 1.0, "drop_rate_pct": 0.1}
+
+
+def vs_night(latest, night: pd.DataFrame, col: str, noise: float, color: str, decimals: int):
+    """Delta text and colour for a metric tile, against the pre-fault night average."""
+    if night.empty:
+        return None, "off"
+    diff = latest[col] - night[col].mean()
+    return f"{diff:+.{decimals}f}", ("off" if abs(diff) < noise else color)
 
 
 def picked_on_map() -> str | None:
@@ -367,15 +384,17 @@ with side_col:
             latest = kpis.iloc[-1]
             night = kpis[kpis["rop_start"] < "07:00"]
             recent = kpis.tail(24)
+            ho_delta, ho_color = vs_night(latest, night, "ho_sr_pct", NOISE_PTS["ho_sr_pct"], "normal", 1)
+            drop_delta, drop_color = vs_night(latest, night, "drop_rate_pct", NOISE_PTS["drop_rate_pct"], "inverse", 2)
             k1, k2, k3 = st.columns(3)
-            k1.metric("HO success", f"{latest['ho_sr_pct']:.1f}%",
-                      f"{latest['ho_sr_pct'] - night['ho_sr_pct'].mean():+.1f} pts" if not night.empty else None,
+            k1.metric("HO success", f"{latest['ho_sr_pct']:.1f}%", ho_delta, delta_color=ho_color,
                       chart_data=recent["ho_sr_pct"], chart_type="line", border=True)
-            k2.metric("Drop rate", f"{latest['drop_rate_pct']:.2f}%",
-                      f"{latest['drop_rate_pct'] - night['drop_rate_pct'].mean():+.2f} pts" if not night.empty else None,
-                      delta_color="inverse", chart_data=recent["drop_rate_pct"], chart_type="line", border=True)
+            k2.metric("Drop rate", f"{latest['drop_rate_pct']:.2f}%", drop_delta, delta_color=drop_color,
+                      chart_data=recent["drop_rate_pct"], chart_type="line", border=True)
             k3.metric("PRB util DL", f"{latest['prb_util_dl_pct']:.0f}%", delta_color="off",
                       chart_data=recent["prb_util_dl_pct"], chart_type="area", border=True)
+            st.caption("Change in percentage points vs the 00:00-07:00 average, before the fault. "
+                       "Grey means within normal ROP-to-ROP variation.")
 
             style.section(f"Handover success · {cell}", f"15-min ROPs · latest {latest['rop_start']}")
             st.altair_chart(charts.kpi_trend(kpis, ctx.oss.day_start, change_events(cell, presenter)),
