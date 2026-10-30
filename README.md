@@ -72,8 +72,11 @@ doesn't leaves the fault in place.
   go through the model.
 - **Audit log** of every tool call and decision, in the UI and in
   `output/audit.jsonl`.
-- **Presenter view** that reveals the root cause and live PCI-conflict state,
-  collapsed by default.
+- **NOC console UI.** Network health tiles, a clickable sector map coloured by
+  handover success, a KPI trend with change markers, an investigation progress
+  strip and an approval card with the guardrail results and config diff.
+- **Presenter mode** (sidebar toggle) that draws the PCI clash on the map,
+  marks the commissioning event on the KPI chart and adds a root-cause tab.
 
 ## Quickstart
 
@@ -117,7 +120,7 @@ Any OpenAI-compatible endpoint with tool calling works for local runs.
 
 | Component | File | Notes |
 | --- | --- | --- |
-| UI | `app.py`, `launch_app.py` | Streamlit, bound to `127.0.0.1:$CDSW_APP_PORT` |
+| UI | `app.py`, `launch_app.py`, `src/ui/` | Streamlit with Altair charts, bound to `127.0.0.1:$CDSW_APP_PORT` |
 | Agent | `src/agent.py` | `create_react_agent`, system prompt, in-memory checkpointer |
 | LLM client | `src/llm.py`, `src/config.py` | `ChatOpenAI` against CAII; key from `CAII_API_KEY`, `/tmp/jwt`, or `CDP_TOKEN` |
 | Read tools | `src/tools/read_tools.py` | Alarms, KPIs, handover relations, neighbours, cell config, CM changes |
