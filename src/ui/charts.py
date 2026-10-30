@@ -68,6 +68,10 @@ def cell_health(oss: MockOSS) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _at(day_start: datetime, hhmm: str) -> datetime:
+    return day_start + timedelta(hours=int(hhmm[:2]), minutes=int(hhmm[3:]))
+
+
 def _sector_point(row, km: float = 0.17) -> tuple[float, float]:
     """A point a little way out along the cell's azimuth, for drawing links."""
     if row["kind"] == "small":
@@ -90,15 +94,18 @@ def _base(chart: alt.Chart | alt.LayerChart) -> alt.LayerChart:
 
 def network_map(health: pd.DataFrame, selected: str, conflicts: dict | None = None) -> alt.LayerChart:
     """Sector map of the network. `conflicts` (presenter view) draws the PCI clash."""
-    df = health.copy()
+    # Derived columns are built as plain lists and added in one assign(): no
+    # in-place column writes, which older pandas misreports on Python 3.14.
+    rows = health.to_dict("records")
+    small = [r["kind"] == "small" for r in rows]
+    df = health.assign(
+        t0=[0.0 if s else math.radians(r["azimuth"] - SECTOR_HALF_WIDTH_DEG) for r, s in zip(rows, small)],
+        t1=[2 * math.pi if s else math.radians(r["azimuth"] + SECTOR_HALF_WIDTH_DEG) for r, s in zip(rows, small)],
+        r=[SMALL_RADIUS_PX if s else MACRO_RADIUS_PX for s in small],
+        selected=[r["cell_id"] == selected for r in rows],
+        ho_label=["n/a" if pd.isna(r["ho_sr_pct"]) else f"{r['ho_sr_pct']:.1f}%" for r in rows],
+    )
     is_small = df["kind"] == "small"
-    df["t0"] = df["azimuth"].map(lambda az: math.radians(az - SECTOR_HALF_WIDTH_DEG))
-    df["t1"] = df["azimuth"].map(lambda az: math.radians(az + SECTOR_HALF_WIDTH_DEG))
-    df.loc[is_small, "t0"], df.loc[is_small, "t1"] = 0.0, 2 * math.pi
-    df["r"] = MACRO_RADIUS_PX
-    df.loc[is_small, "r"] = SMALL_RADIUS_PX
-    df["selected"] = df["cell_id"] == selected
-    df["ho_label"] = df["ho_sr_pct"].map(lambda v: "n/a" if pd.isna(v) else f"{v:.1f}%")
 
     xs = alt.X("x:Q", axis=None, scale=alt.Scale(domain=[-0.6, df["x"].max() + 0.6]))
     ys = alt.Y("y:Q", axis=None, scale=alt.Scale(domain=[-0.6, df["y"].max() + 0.75]))
@@ -161,8 +168,7 @@ def network_map(health: pd.DataFrame, selected: str, conflicts: dict | None = No
 
 def kpi_trend(kpis: pd.DataFrame, day_start: datetime, events: list[dict]) -> alt.LayerChart:
     """Handover success per ROP with the target line, change markers and a hover readout."""
-    df = kpis[["rop_start", "ho_sr_pct", "drop_rate_pct"]].copy()
-    df["t"] = df["rop_start"].map(lambda s: day_start + timedelta(hours=int(s[:2]), minutes=int(s[3:])))
+    df = kpis[["rop_start", "ho_sr_pct", "drop_rate_pct"]].assign(t=lambda d: [_at(day_start, s) for s in d["rop_start"]])
     lo = min(HO_CRITICAL_PCT - 5, math.floor(df["ho_sr_pct"].min()) - 3)
     x = alt.X("t:T", title=None, axis=alt.Axis(format="%H:%M", tickCount=8, grid=False))
     # Every layer shares this scale; otherwise Vega-Lite unions in a zero-based default.
@@ -190,8 +196,7 @@ def kpi_trend(kpis: pd.DataFrame, day_start: datetime, events: list[dict]) -> al
 
     layers = [target, target_label, line, hits, cross, dot]
     if events:
-        edf = pd.DataFrame(events)
-        edf["t"] = edf["time"].map(lambda s: day_start + timedelta(hours=int(s[:2]), minutes=int(s[3:])))
+        edf = pd.DataFrame([dict(e, t=_at(day_start, e["time"])) for e in events])
         layers.append(alt.Chart(edf).mark_rule(color=CHANGE, strokeWidth=1.5, strokeDash=[2, 2]).encode(
             x="t:T", tooltip=[alt.Tooltip("time:N", title="Time"), alt.Tooltip("label:N", title="Change")]))
         # Labels near the right edge go on the left of their marker so they stay inside the plot.

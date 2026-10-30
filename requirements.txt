@@ -1,5 +1,11 @@
-streamlit>=1.50,<2
-pandas>=2.0,<3
+# Lower bounds are the versions tested on Python 3.14. They also force pip to
+# upgrade older copies preinstalled in the runtime image: pandas, numpy and
+# pyarrow builds without Python 3.14 support crash the app with a segfault.
+streamlit>=1.66,<2
+altair>=6.0,<7
+pandas>=2.3.3,<3
+numpy>=2.3.3,<3
+pyarrow>=22,<27
 python-dotenv>=1.0,<2
 
 langgraph>=0.4,<1.0
