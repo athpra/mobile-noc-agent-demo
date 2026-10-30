@@ -102,21 +102,12 @@ Any OpenAI-compatible endpoint with tool calling works for local runs.
 
 ## Architecture / Software Components
 
-```
- NOC engineer ──► Streamlit app (Cloudera AI Application)
-                     │  chat · evidence · approve / reject
-                     ▼
-                 LangGraph agent ◄──► LLM (Cloudera AI Inference Service)
-                     │   checkpointer holds paused runs
-       ┌─────────────┼──────────────────────┐
-       ▼             ▼                      ▼
-  Read tools     run_python            propose_cm_change
-  FM · PM · CM   (sandbox: no network,  guardrails → interrupt()
-  topology        no credentials)       → approve → apply
-       │                                    │
-       └──────────► Mock OSS API ◄──────────┘
-                    synthetic RAN · scenario engine
-```
+![Functional architecture: the NOC engineer talks to the Streamlit app; the LangGraph agent reasons with the LLM, reads FM/PM/CM through trusted tools, runs analysis code in an untrusted sandbox, and changes the network only through propose_cm_change after a person approves](assets/architecture.png)
+
+Black arrows are requests and data; green arrows are the change path, which
+needs a person to approve. The agent's own code runs only in the sandbox
+(orange), and everything in the dotted box is synthetic and replaced at
+go-live.
 
 | Component | File | Notes |
 | --- | --- | --- |
@@ -142,6 +133,7 @@ src/                     Agent, tools, sandbox, synthetic network
 scripts/                 install_dependencies.py, check_scenario.py, check_endpoint.py
 tests/                   Network, guardrail and full-graph tests
 deploy/                  CML deployment guide
+assets/                  Architecture diagram
 output/                  Audit log (git-ignored)
 ```
 
